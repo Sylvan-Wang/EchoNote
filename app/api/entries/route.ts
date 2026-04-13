@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') ?? '20', 10)
     const offset = parseInt(searchParams.get('offset') ?? '0', 10)
 
-    const entries = listEntries(limit, offset)
+    const entries = await listEntries(limit, offset)
 
     const data = entries.map((e) => ({
       id: e.id,

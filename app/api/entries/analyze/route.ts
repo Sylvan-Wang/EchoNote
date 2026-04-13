@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
 import { transcribeAudio } from '@/lib/whisper'
 import { cleanText, analyzeEmotion, generateResponse } from '@/lib/claude'
 import { checkRiskLevel, SAFE_RESPONSE } from '@/lib/safety'
-import { getUser, logEvent } from '@/lib/db'
+import { getUser, logEvent, uploadAudio } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,18 +14,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '没有找到音频文件' }, { status: 400 })
     }
 
-    // Read audio as Buffer
     const bytes = await audioFile.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Save audio file
-    const timestamp = Date.now()
-    const filename = `${timestamp}.webm`
-    const audioDir = './data/audio'
-    fs.mkdirSync(audioDir, { recursive: true })
-    const audioPath = path.join(audioDir, filename)
-    fs.writeFileSync(audioPath, buffer)
-    const audioUrl = `/data/audio/${filename}`
+    // Upload audio to Supabase Storage
+    const filename = `${Date.now()}.webm`
+    const audioUrl = await uploadAudio(buffer, filename)
 
     // Transcribe
     const raw_transcript = await transcribeAudio(buffer, filename)
@@ -35,11 +27,11 @@ export async function POST(request: NextRequest) {
     // Clean text
     const cleaned_text = await cleanText(raw_transcript)
 
-    // Analyze emotion
+    // Analyze emotion + keywords
     const { primary_emotion, secondary_emotion, emotion_confidence, keywords } =
       await analyzeEmotion(cleaned_text)
 
-    // Check risk level
+    // Risk check
     const risk_level = checkRiskLevel(cleaned_text)
 
     let ai_understanding: string
@@ -53,7 +45,7 @@ export async function POST(request: NextRequest) {
       ai_suggestion = SAFE_RESPONSE.suggestion
       suggestion_type = SAFE_RESPONSE.suggestion_type
     } else {
-      const user = getUser()
+      const user = await getUser()
       const response = await generateResponse({
         cleaned_text,
         primary_emotion,
@@ -68,7 +60,7 @@ export async function POST(request: NextRequest) {
       suggestion_type = response.suggestion_type
     }
 
-    logEvent('analyze_success', undefined, { mode, primary_emotion, risk_level })
+    await logEvent('analyze_success', undefined, { mode, primary_emotion, risk_level })
 
     return NextResponse.json({
       success: true,

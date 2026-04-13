@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
     }
 
-    const entry = getEntry(entryId)
+    const entry = await getEntry(entryId)
 
     if (!entry) {
       return NextResponse.json({ success: false, error: '日记不存在' }, { status: 404 })

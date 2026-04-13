@@ -16,8 +16,8 @@ export async function POST(
     const body = await request.json() as { helpful?: string; adopted?: string }
     const { helpful = 'unknown', adopted = 'unknown' } = body
 
-    updateFeedback(entryId, helpful, adopted)
-    logEvent('feedback_update', entryId, { helpful, adopted })
+    await updateFeedback(entryId, helpful, adopted)
+    await logEvent('feedback_update', entryId, { helpful, adopted })
 
     return NextResponse.json({ success: true })
   } catch (err) {

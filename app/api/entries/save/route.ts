@@ -31,8 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '缺少分析结果' }, { status: 400 })
     }
 
-    // Save entry to DB
-    const entryId = saveEntry({
+    const entryId = await saveEntry({
       audio_url: analysis_result.audio_url,
       raw_transcript: analysis_result.raw_transcript,
       cleaned_text: analysis_result.cleaned_text,
@@ -48,11 +47,11 @@ export async function POST(request: NextRequest) {
       risk_level: analysis_result.risk_level ?? 'L1',
       feedback_helpful,
       suggestion_adopted,
-      saved: 1,
+      saved: true,
     })
 
-    // Update memory
-    const user = getUser()
+    // Update weak memory
+    const user = await getUser()
     const keywords = analysis_result.keywords_json
       ? (JSON.parse(analysis_result.keywords_json) as string[])
       : (analysis_result.keywords ?? [])
@@ -66,9 +65,8 @@ export async function POST(request: NextRequest) {
       mode: analysis_result.mode_used ?? 'accept',
     })
 
-    dbUpdateMemory(newSummary)
-
-    logEvent('save_entry_success', entryId, { feedback_helpful, suggestion_adopted })
+    await dbUpdateMemory(newSummary)
+    await logEvent('save_entry_success', entryId, { feedback_helpful, suggestion_adopted })
 
     return NextResponse.json({ success: true, data: { id: entryId } })
   } catch (err) {
