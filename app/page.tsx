@@ -1,65 +1,94 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
+function getTodayPrompt(): string {
+  const hour = new Date().getHours()
+  if (hour < 6) return '深夜了，还有什么放不下的？'
+  if (hour < 10) return '早上好，今天想从哪里开始？'
+  if (hour < 14) return '午间，今天的状态怎么样？'
+  if (hour < 18) return '下午好，今天怎么样？'
+  if (hour < 22) return '晚上好，今天有什么想说的？'
+  return '夜深了，今天过得如何？'
+}
+
+function formatToday(): string {
+  const d = new Date()
+  const month = d.getMonth() + 1
+  const day = d.getDate()
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+  const weekday = weekdays[d.getDay()]
+  return `${month}月${day}日 · 周${weekday}`
+}
+
+export default function HomePage() {
+  const [entryCount, setEntryCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/entries?limit=1&offset=0')
+      .then((r) => r.json())
+      .then((j: { success: boolean; data: unknown[] }) => {
+        if (j.success) {
+          // Just check if there are entries at all; fetch total separately
+          fetch('/api/entries?limit=200&offset=0')
+            .then((r2) => r2.json())
+            .then((j2: { success: boolean; data: unknown[] }) => {
+              if (j2.success) setEntryCount(j2.data.length)
+            })
+            .catch(() => {})
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen flex flex-col items-center justify-between px-5 py-12 max-w-md mx-auto w-full">
+      {/* Top section */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 w-full">
+        {/* Logo / Title */}
+        <div className="text-center">
+          <h1 className="text-6xl font-bold text-amber-400 tracking-tight mb-1">一刻</h1>
+          <p className="text-stone-500 text-sm tracking-widest uppercase">EchoNote</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+
+        {/* Tagline */}
+        <p className="text-stone-300 text-lg text-center leading-relaxed">
+          说出来，帮你理清一点。
+        </p>
+
+        {/* Main CTA */}
+        <Link
+          href="/record"
+          className="w-full bg-amber-500 text-stone-900 font-semibold text-lg rounded-2xl py-4 text-center
+            active:scale-98 transition-transform hover:bg-amber-400 min-h-[56px] flex items-center justify-center"
+        >
+          开始记录
+        </Link>
+
+        {/* History button */}
+        <Link
+          href="/history"
+          className="w-full border border-stone-700 text-stone-300 rounded-2xl py-4 text-center text-base
+            hover:border-stone-500 hover:text-stone-100 transition-colors min-h-[56px] flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+          </svg>
+          我的日记
+          {entryCount !== null && entryCount > 0 && (
+            <span className="bg-stone-700 text-stone-300 text-xs px-2 py-0.5 rounded-full">
+              {entryCount}
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {/* Bottom tip */}
+      <div className="text-center pb-4">
+        <p className="text-stone-600 text-xs">{formatToday()}</p>
+        <p className="text-stone-500 text-sm mt-1">{getTodayPrompt()}</p>
+      </div>
+    </main>
+  )
 }
